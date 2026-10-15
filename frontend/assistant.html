@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cineverse - AI Concierge & Agent Orchestration</title>
+  <meta name="description" content="Intelligent Cineverse concierge. Experience GenAI features, single-agent tool execution, and multi-agent orchestration.">
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <header>
+    <nav class="navbar">
+      <a href="/" class="nav-brand">
+        <span>CINEVERSE</span>
+        <span class="brand-badge">AI LABS</span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="/movies.html">Movies</a></li>
+        <li><a href="/bookings.html">My Bookings</a></li>
+        <li><a href="/assistant.html" class="active">AI Concierge</a></li>
+        <li><a href="/admin.html">Admin</a></li>
+      </ul>
+
+      <div class="nav-user">
+        <label for="global-user-select" style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">USER:</label>
+        <select id="global-user-select" class="user-select" aria-label="Demo User Switcher"></select>
+      </div>
+    </nav>
+  </header>
+
+  <main class="main-container" style="padding-bottom: 2rem;">
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h1 style="font-size: 1.85rem; margin-bottom: 0.2rem;">Cinema AI Concierge</h1>
+        <p style="color: var(--text-muted); font-size: 0.88rem;">
+          Toggle across architecture levels: Direct GenAI &rarr; Single Agent with Tools &rarr; Multi-Agent Orchestration.
+        </p>
+      </div>
+
+      <!-- Mode Switcher -->
+      <div class="mode-pills" role="tablist">
+        <button id="mode-genai" class="mode-pill" onclick="switchMode('genai')">1. GenAI Features</button>
+        <button id="mode-single" class="mode-pill" onclick="switchMode('single')">2. Single Agent</button>
+        <button id="mode-multi" class="mode-pill active" onclick="switchMode('multi')">3. Multi-Agent Orchestration</button>
+      </div>
+    </div>
+
+    <!-- Quick Prompt Chips -->
+    <div id="quick-chips" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;">
+      <button class="btn btn-secondary btn-sm" onclick="sendQuickPrompt('Show me sci-fi movies screening right now')">Show me sci-fi movies</button>
+      <button class="btn btn-secondary btn-sm" onclick="sendQuickPrompt('What are the upcoming showtimes for Interstellar?')">Showtimes for Interstellar</button>
+      <button class="btn btn-secondary btn-sm" onclick="sendQuickPrompt('Check available seats for show 10')">Check seats for show 10</button>
+      <button class="btn btn-secondary btn-sm" onclick="sendQuickPrompt('Hold seats 1 and 2 for show 10')">Hold seats for show 10</button>
+      <button class="btn btn-secondary btn-sm" onclick="sendQuickPrompt('What is your refund policy and cancellation rules?')">Refund Policy</button>
+      <button class="btn btn-secondary btn-sm" onclick="sendQuickPrompt('Check my bookings history')">My Bookings</button>
+    </div>
+
+    <!-- GenAI Quick Action Toolbar (Visible only in GenAI mode) -->
+    <div id="genai-toolbar" style="display: none; background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; gap: 0.75rem; flex-wrap: wrap;">
+      <button class="btn btn-primary btn-sm" onclick="runGenAIMovieSummary()">Marketing Blurb</button>
+      <button class="btn btn-gold btn-sm" onclick="runGenAIRecommend()">Mood Recommender</button>
+      <button class="btn btn-secondary btn-sm" onclick="runGenAIReviewSentiment()">Review Sentiment</button>
+      <button class="btn btn-secondary btn-sm" onclick="runGenAIBookingEmail()">Confirmation Email</button>
+    </div>
+
+    <!-- Main Assistant Workspace -->
+    <div class="assistant-container">
+      
+      <!-- Chat Interface -->
+      <div class="chat-card">
+        <div class="chat-header">
+          <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <div style="width: 10px; height: 10px; border-radius: 50%; background-color: var(--accent-green); box-shadow: 0 0 8px var(--accent-green);"></div>
+            <strong id="active-mode-label" style="font-size: 0.95rem;">Multi-Agent Orchestrator</strong>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="clearChatSession()" title="Start New Session">New Session</button>
+        </div>
+
+        <div id="chat-messages" class="chat-messages">
+          <div class="chat-bubble assistant">
+            Hello! I am your Cineverse AI Assistant. I can help you search movies, check theatre schedules, select seats, hold tickets, and explain our cancellation policies. How can I help you today?
+          </div>
+        </div>
+
+        <!-- Input Bar -->
+        <form class="chat-input-bar" onsubmit="event.preventDefault(); submitChatMessage();">
+          <input type="text" id="chat-input" placeholder="Type your message or cinema inquiry..." autocomplete="off" required>
+          <button type="submit" id="chat-send-btn" class="btn btn-primary">Send</button>
+        </form>
+      </div>
+
+      <!-- Agent Trace Sidebar (Active in Multi-Agent mode) -->
+      <div id="trace-sidebar" class="trace-card">
+        <div class="trace-header">
+          <span>Agent Execution Trace</span>
+          <span id="trace-badge-count" class="status-badge" style="background: rgba(139, 92, 246, 0.2); color: #c084fc; font-size: 0.7rem;">Ready</span>
+        </div>
+
+        <div id="trace-list" class="trace-list">
+          <p style="color: var(--text-muted); font-size: 0.85rem; text-align: center; margin-top: 2rem;">
+            Specialist agent interactions, tool calls, and CriticAgent verifications will appear here in real-time.
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/assistant.js"></script>
+</body>
+</html>

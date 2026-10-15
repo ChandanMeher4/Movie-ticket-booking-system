@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: cineverse_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secret_password
+      MYSQL_DATABASE: movie_ticket_booking
+      MYSQL_USER: cineverse
+      MYSQL_PASSWORD: cineverse_secret
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./sql/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_secret_password"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: cineverse_app
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: production
+      DATABASE_HOST: db
+      DATABASE_PORT: 3306
+      DATABASE_NAME: movie_ticket_booking
+      DATABASE_USER: cineverse
+      DATABASE_PASSWORD: cineverse_secret
+      # Leave LLM_API_KEY empty for automatic deterministic mock fallback
+      LLM_API_KEY: ""
+      LLM_BASE_URL: "https://api.openai.com/v1"
+      LLM_MODEL: "gpt-4o-mini"
+    volumes:
+      - .:/app
+
+volumes:
+  mysql_data:

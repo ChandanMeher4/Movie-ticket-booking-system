@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cineverse - Studio Operations & Administration</title>
+  <meta name="description" content="Administration portal for Cineverse movie catalogs, showtime scheduling, and box office revenue analytics.">
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <header>
+    <nav class="navbar">
+      <a href="/" class="nav-brand">
+        <span>CINEVERSE</span>
+        <span class="brand-badge">ADMIN</span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="/movies.html">Movies</a></li>
+        <li><a href="/bookings.html">My Bookings</a></li>
+        <li><a href="/assistant.html">AI Concierge</a></li>
+        <li><a href="/admin.html" class="active">Admin</a></li>
+      </ul>
+
+      <div class="nav-user">
+        <label for="global-user-select" style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">USER:</label>
+        <select id="global-user-select" class="user-select" aria-label="Demo User Switcher"></select>
+      </div>
+    </nav>
+  </header>
+
+  <main class="main-container">
+    
+    <!-- Dashboard Stats Cards -->
+    <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 2.5rem;">
+      <div style="background-color: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 1.5rem; border-radius: var(--radius-lg);">
+        <span style="font-size: 0.82rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Box Office Revenue</span>
+        <div id="stat-revenue" style="font-size: 2rem; font-weight: 800; color: var(--accent-green); margin-top: 0.25rem;">₹0.00</div>
+      </div>
+      <div style="background-color: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 1.5rem; border-radius: var(--radius-lg);">
+        <span style="font-size: 0.82rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Confirmed Bookings</span>
+        <div id="stat-bookings" style="font-size: 2rem; font-weight: 800; color: var(--accent-gold); margin-top: 0.25rem;">0</div>
+      </div>
+      <div style="background-color: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 1.5rem; border-radius: var(--radius-lg);">
+        <span style="font-size: 0.82rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Active Movies</span>
+        <div id="stat-movies" style="font-size: 2rem; font-weight: 800; color: var(--accent-cyan); margin-top: 0.25rem;">0</div>
+      </div>
+      <div style="background-color: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 1.5rem; border-radius: var(--radius-lg);">
+        <span style="font-size: 0.82rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Auditorium Screens</span>
+        <div id="stat-screens" style="font-size: 2rem; font-weight: 800; color: var(--accent-purple); margin-top: 0.25rem;">6</div>
+      </div>
+    </section>
+
+    <!-- Operations Grid: Add Movie & Schedule Show -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 3rem;">
+      
+      <!-- Add Movie Form -->
+      <section style="background-color: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 1.75rem; border-radius: var(--radius-lg);">
+        <h2 style="font-size: 1.35rem; margin-bottom: 1.25rem; color: var(--accent-gold);">Add New Movie</h2>
+        <form id="add-movie-form" onsubmit="event.preventDefault(); submitMovie();">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <label style="display: block; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.3rem;">Movie Title</label>
+              <input type="text" id="m-title" class="search-box" style="width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-surface-elevated);" required>
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.3rem;">Genre</label>
+              <input type="text" id="m-genre" class="search-box" style="width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-surface-elevated);" placeholder="e.g. Action, Sci-Fi" required>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <label style="display: block; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.3rem;">Language</label>
+              <input type="text" id="m-lang" class="search-box" style="width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-surface-elevated);" value="English" required>
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.3rem;">Duration (Min)</label>
+              <input type="number" id="m-duration" class="search-box" style="width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-surface-elevated);" value="145" min="30" max="360" required>
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.3rem;">Rating</label>
+              <select id="m-rating" class="filter-select" style="width: 100%; padding: 0.6rem;">
+                <option value="UA">UA</option>
+                <option value="U">U</option>
+                <option value="A">A</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.3rem;">Poster Image URL</label>
+            <input type="url" id="m-poster" class="search-box" style="width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-surface-elevated);" placeholder="https://..." value="https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500">
+          </div>
+
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.3rem;">Plot Description</label>
+            <textarea id="m-desc" rows="3" style="width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-surface-elevated); color: #fff; font-family: inherit; font-size: 0.88rem;" required></textarea>
+          </div>
+
+          <button type="submit" id="add-movie-btn" class="btn btn-primary" style="width: 100%;">Create Movie Listing</button>
+        </form>
+      </section>
+
+      <!-- Schedule Show Form -->
+      <section style="background-color: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 1.75rem; border-radius: var(--radius-lg);">
+        <h2 style="font-size: 1.35rem; margin-bottom: 1.25rem; color: var(--accent-cyan);">Schedule Screening</h2>
+        <form id="schedule-show-form" onsubmit="event.preventDefault(); submitShow();">
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.3rem;">Select Movie</label>
+            <select id="s-movie-select" class="filter-select" style="width: 100%; padding: 0.6rem;" required></select>
+          </div>
+
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.3rem;">Auditorium Screen</label>
+            <select id="s-screen-select" class="filter-select" style="width: 100%; padding: 0.6rem;" required></select>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <label style="display: block; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.3rem;">Start Time</label>
+              <input type="datetime-local" id="s-start-time" class="search-box" style="width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-surface-elevated);" required>
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.3rem;">Base Price (₹)</label>
+              <input type="number" id="s-price" class="search-box" style="width: 100%; padding: 0.6rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-surface-elevated);" value="280.00" step="10" min="50" max="2000" required>
+            </div>
+          </div>
+
+          <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+            End time will be automatically computed based on movie duration + 20-minute turnaround. Screen conflict checks are enforced atomically.
+          </p>
+
+          <button type="submit" id="schedule-show-btn" class="btn btn-secondary" style="width: 100%;">Schedule Show</button>
+        </form>
+      </section>
+
+    </div>
+
+    <!-- Active Movies Management Table -->
+    <section>
+      <h2 style="font-size: 1.5rem; margin-bottom: 1rem;">Active Movies Inventory</h2>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Title</th>
+              <th>Genre</th>
+              <th>Language</th>
+              <th>Duration</th>
+              <th>Rating</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="admin-movies-tbody">
+            <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Loading movies...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/admin.js"></script>
+</body>
+</html>

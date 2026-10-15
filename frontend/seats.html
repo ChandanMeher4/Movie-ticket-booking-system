@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cineverse - Interactive Seat Selection</title>
+  <meta name="description" content="Select seats in real-time, view live pricing breakdown, and hold tickets with 5-minute atomic locking.">
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <header>
+    <nav class="navbar">
+      <a href="/" class="nav-brand">
+        <span>CINEVERSE</span>
+        <span class="brand-badge">STUDIO</span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="/movies.html">Movies</a></li>
+        <li><a href="/bookings.html">My Bookings</a></li>
+        <li><a href="/assistant.html">AI Concierge</a></li>
+        <li><a href="/admin.html">Admin</a></li>
+      </ul>
+
+      <div class="nav-user">
+        <label for="global-user-select" style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">USER:</label>
+        <select id="global-user-select" class="user-select" aria-label="Demo User Switcher"></select>
+      </div>
+    </nav>
+  </header>
+
+  <main class="main-container">
+    <!-- Show Header Summary -->
+    <div id="show-header" style="background-color: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 1.5rem; border-radius: var(--radius-lg); margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h1 id="show-movie-title" style="font-size: 1.75rem; margin-bottom: 0.25rem;">Loading Show Details...</h1>
+        <p id="show-details-sub" style="color: var(--text-secondary); font-size: 0.95rem;">Please select a valid show</p>
+      </div>
+      <div>
+        <a href="/movies.html" class="btn btn-secondary btn-sm">&larr; Change Show</a>
+      </div>
+    </div>
+
+    <!-- Active Hold Banner (Visible when seats are currently held) -->
+    <div id="hold-banner" class="hold-timer-banner" style="display: none;">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <span style="font-size: 1.25rem;">&#9201;</span>
+        <div>
+          <strong style="color: #fff; font-size: 0.95rem;">Seats Temporarily Held</strong>
+          <p style="font-size: 0.82rem; color: var(--text-secondary);">Complete payment before timer expires to finalize reservation.</p>
+        </div>
+      </div>
+      <div id="hold-countdown" class="timer-digits">05:00</div>
+    </div>
+
+    <!-- Main Layout: Seat Grid + Order Summary -->
+    <div style="display: grid; grid-template-columns: 1fr 340px; gap: 2rem; align-items: start;">
+      
+      <!-- Seat Map Section -->
+      <section style="background-color: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 2rem 1.5rem; display: flex; flex-direction: column; align-items: center;">
+        
+        <!-- Curved Screen Representation -->
+        <div class="screen-stage-container">
+          <div class="cinema-screen"></div>
+          <span class="screen-label">EYES THIS WAY &bull; CINEMA SCREEN</span>
+        </div>
+
+        <!-- Seat Color Legend -->
+        <div class="seat-legend">
+          <div class="legend-item">
+            <div class="legend-box" style="background-color: var(--seat-available); border: 1px solid var(--seat-available-border);"></div>
+            <span>Available</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-box" style="background-color: var(--seat-selected); border: 1px solid var(--seat-selected-border);"></div>
+            <span>Selected</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-box" style="background-color: var(--seat-held); border: 1px solid #d97706;"></div>
+            <span>Held (5m TTL)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-box" style="background-color: var(--seat-booked); border: 1px solid var(--seat-booked-border);"></div>
+            <span>Booked</span>
+          </div>
+        </div>
+
+        <!-- Tier Legend Badges -->
+        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; font-size: 0.82rem; color: var(--text-muted);">
+          <span>Regular (1.0x)</span> &bull;
+          <span>Premium (1.4x)</span> &bull;
+          <span>Recliner (1.8x)</span>
+        </div>
+
+        <!-- Dynamic Seat Grid Matrix -->
+        <div id="seat-matrix" class="seat-matrix">
+          <p style="color: var(--text-muted);">Loading screen seat map...</p>
+        </div>
+
+      </section>
+
+      <!-- Sidebar Order Summary -->
+      <aside class="checkout-panel">
+        <h2 style="font-size: 1.35rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.75rem;">
+          Booking Summary
+        </h2>
+
+        <div style="margin-bottom: 1rem;">
+          <label style="color: var(--text-muted); font-size: 0.82rem; text-transform: uppercase; font-weight: 700;">Selected Seats (Max 6):</label>
+          <div id="selected-seats-pills" style="display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; min-height: 28px;">
+            <span style="color: var(--text-muted); font-size: 0.85rem;">No seats selected</span>
+          </div>
+        </div>
+
+        <div id="price-breakdown-section" style="margin-top: 1.5rem;">
+          <div class="price-summary-row">
+            <span>Base Subtotal:</span>
+            <span id="summary-subtotal">₹0.00</span>
+          </div>
+          <div class="price-summary-row">
+            <span>Weekend Surcharge (10%):</span>
+            <span id="summary-weekend">₹0.00</span>
+          </div>
+          <div class="price-summary-row">
+            <span>Convenience Fee (2%):</span>
+            <span id="summary-fee">₹0.00</span>
+          </div>
+          <div class="price-summary-row total">
+            <span>Total Payable:</span>
+            <span id="summary-total">₹0.00</span>
+          </div>
+        </div>
+
+        <div style="margin-top: 2rem; display: flex; flex-direction: column; gap: 0.75rem;">
+          <button id="hold-seats-btn" class="btn btn-primary" style="width: 100%;" disabled>
+            Hold Seats (5 Mins)
+          </button>
+          <button id="proceed-payment-btn" class="btn btn-gold" style="width: 100%; display: none;">
+            Proceed to Payment &rarr;
+          </button>
+        </div>
+
+        <p style="color: var(--text-muted); font-size: 0.78rem; text-align: center; margin-top: 1rem;">
+          Holding seats triggers atomic database locking. Seats are automatically released if unconfirmed within 5 minutes.
+        </p>
+      </aside>
+
+    </div>
+  </main>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/seats.js"></script>
+</body>
+</html>

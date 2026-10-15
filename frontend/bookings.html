@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cineverse - My Bookings & Checkout</title>
+  <meta name="description" content="Manage your movie ticket bookings, complete checkout payments, and process eligible cancellations with refunds.">
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <header>
+    <nav class="navbar">
+      <a href="/" class="nav-brand">
+        <span>CINEVERSE</span>
+        <span class="brand-badge">STUDIO</span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="/movies.html">Movies</a></li>
+        <li><a href="/bookings.html" class="active">My Bookings</a></li>
+        <li><a href="/assistant.html">AI Concierge</a></li>
+        <li><a href="/admin.html">Admin</a></li>
+      </ul>
+
+      <div class="nav-user">
+        <label for="global-user-select" style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">USER:</label>
+        <select id="global-user-select" class="user-select" aria-label="Demo User Switcher"></select>
+      </div>
+    </nav>
+  </header>
+
+  <main class="main-container">
+    
+    <!-- Dynamic Checkout Section (Visible when booking_id is in URL) -->
+    <section id="checkout-section" style="display: none; margin-bottom: 3rem;">
+      <div class="hero-banner" style="padding: 2rem; margin-bottom: 2rem;">
+        <h2 style="font-size: 1.85rem; margin-bottom: 0.5rem;">Complete Payment & Confirmation</h2>
+        <p style="color: var(--text-secondary); font-size: 0.95rem;">Review your held reservation and authorize payment below.</p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start;">
+        
+        <!-- Reservation Details Card -->
+        <div style="background-color: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 1.75rem; border-radius: var(--radius-lg);">
+          <h3 style="margin-bottom: 1rem; color: var(--accent-gold); font-size: 1.25rem;">Held Reservation</h3>
+          <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.95rem;">
+            <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-muted);">Booking Ref:</span><strong id="chk-ref">#...</strong></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-muted);">Movie:</span><strong id="chk-movie">...</strong></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-muted);">Theatre & Screen:</span><strong id="chk-theatre">...</strong></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-muted);">Showtime:</span><strong id="chk-time">...</strong></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-muted);">Seats:</span><strong id="chk-seats" style="color: var(--accent-gold);">...</strong></div>
+            <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--border-subtle); padding-top: 0.75rem; font-size: 1.15rem;">
+              <span>Total Payable:</span><strong id="chk-amount" style="color: var(--accent-green);">...</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mock Payment Gateway Form -->
+        <div style="background-color: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 1.75rem; border-radius: var(--radius-lg);">
+          <h3 style="margin-bottom: 1.25rem; font-size: 1.25rem;">Mock Payment Gateway</h3>
+          <form id="payment-form" onsubmit="event.preventDefault(); processPayment();">
+            <div style="margin-bottom: 1rem;">
+              <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Payment Method</label>
+              <select id="payment-method-select" class="filter-select" style="width: 100%;">
+                <option value="card">Credit / Debit Card</option>
+                <option value="upi">UPI (Instant VPA)</option>
+                <option value="wallet">Cineverse Digital Wallet</option>
+              </select>
+            </div>
+
+            <div id="card-inputs-container">
+              <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Card Number</label>
+                <input type="text" id="card-num" class="search-box" style="width: 100%; padding: 0.65rem 1rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-surface-elevated);" placeholder="4532 &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; 8920" value="4532 8812 3940 8920" required>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                <div>
+                  <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Expiry</label>
+                  <input type="text" class="search-box" style="width: 100%; padding: 0.65rem 1rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-surface-elevated);" placeholder="MM/YY" value="12/28" required>
+                </div>
+                <div>
+                  <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.4rem;">CVV</label>
+                  <input type="password" maxlength="3" class="search-box" style="width: 100%; padding: 0.65rem 1rem; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-surface-elevated);" placeholder="&bull;&bull;&bull;" value="782" required>
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" id="pay-now-btn" class="btn btn-primary" style="width: 100%; font-size: 1.05rem; padding: 0.85rem;">
+              Pay & Confirm Booking
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Success Confirmation Voucher (Hidden by default) -->
+    <section id="voucher-section" style="display: none; margin-bottom: 3.5rem;">
+      <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(13, 17, 26, 0.6)); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: var(--radius-lg); padding: 2.5rem; max-width: 650px; margin: 0 auto; text-align: center; box-shadow: var(--shadow-lg);">
+        <div style="font-size: 3rem; margin-bottom: 0.5rem;">&#10004;</div>
+        <h2 style="font-size: 2rem; color: var(--accent-green); margin-bottom: 0.5rem;">Booking Confirmed!</h2>
+        <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1.5rem;">Your transaction has been authorized and your seats are guaranteed.</p>
+        
+        <div id="voucher-details" style="background: var(--bg-surface); padding: 1.5rem; border-radius: var(--radius-md); text-align: left; font-size: 0.95rem; display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1.5rem; border: 1px solid var(--border-subtle);">
+          <!-- Injected dynamically -->
+        </div>
+
+        <button class="btn btn-secondary" onclick="window.location.href='/bookings.html'">View in My Bookings</button>
+      </div>
+    </section>
+
+    <!-- My Bookings History Section -->
+    <section>
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem;">
+        <div>
+          <h1 style="font-size: 2rem; margin-bottom: 0.25rem;">My Bookings & History</h1>
+          <p style="color: var(--text-muted); font-size: 0.92rem;">Active tickets and past reservations for your account.</p>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Movie</th>
+              <th>Showtime</th>
+              <th>Theatre / Screen</th>
+              <th>Seats</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="bookings-table-body">
+            <tr>
+              <td colspan="8" style="text-align: center; color: var(--text-muted);">Loading bookings...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Cancellation Confirmation Modal -->
+  <div id="cancel-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <h3 style="font-size: 1.4rem; color: var(--accent-red); margin-bottom: 0.5rem;">Confirm Cancellation</h3>
+      <p style="color: var(--text-secondary); font-size: 0.92rem; margin-bottom: 1.25rem;">
+        Ticket cancellations are processed automatically according to Cineverse refund policies.
+      </p>
+
+      <div id="cancel-policy-summary" style="background-color: var(--bg-surface-elevated); padding: 1.25rem; border-radius: var(--radius-md); font-size: 0.9rem; margin-bottom: 1.5rem; border: 1px solid var(--border-subtle);">
+        <!-- Injected dynamically -->
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+        <button id="cancel-modal-close" class="btn btn-secondary btn-sm">Keep Tickets</button>
+        <button id="confirm-cancel-btn" class="btn btn-danger btn-sm">Cancel & Refund</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/bookings.js"></script>
+</body>
+</html>

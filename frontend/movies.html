@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cineverse - Movie Catalog & Schedules</title>
+  <meta name="description" content="Browse Cineverse movie catalog, filter by genre or language, and check live showtimes across theatres.">
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <header>
+    <nav class="navbar">
+      <a href="/" class="nav-brand">
+        <span>CINEVERSE</span>
+        <span class="brand-badge">STUDIO</span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="/movies.html" class="active">Movies</a></li>
+        <li><a href="/bookings.html">My Bookings</a></li>
+        <li><a href="/assistant.html">AI Concierge</a></li>
+        <li><a href="/admin.html">Admin</a></li>
+      </ul>
+
+      <div class="nav-user">
+        <label for="global-user-select" style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">USER:</label>
+        <select id="global-user-select" class="user-select" aria-label="Demo User Switcher"></select>
+      </div>
+    </nav>
+  </header>
+
+  <main class="main-container">
+    <div style="margin-bottom: 2rem;">
+      <h1 style="font-size: 2.25rem; margin-bottom: 0.35rem;">Movie Catalog & Showtimes</h1>
+      <p style="color: var(--text-muted);">Explore current screenings, filter by preference, and book seats.</p>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <section class="filter-bar">
+      <div class="search-box">
+        <input type="text" id="movie-search-input" placeholder="Search movies by title or plot..." aria-label="Search movies">
+      </div>
+
+      <select id="genre-filter" class="filter-select" aria-label="Filter by Genre">
+        <option value="">All Genres</option>
+        <option value="Action">Action</option>
+        <option value="Sci-Fi">Sci-Fi</option>
+        <option value="Animation">Animation</option>
+        <option value="Drama">Drama</option>
+        <option value="Thriller">Thriller</option>
+      </select>
+
+      <select id="language-filter" class="filter-select" aria-label="Filter by Language">
+        <option value="">All Languages</option>
+        <option value="English">English</option>
+        <option value="Hindi">Hindi</option>
+        <option value="Telugu">Telugu</option>
+        <option value="Japanese">Japanese</option>
+      </select>
+
+      <select id="sort-filter" class="filter-select" aria-label="Sort movies">
+        <option value="release_date_desc">Release Date (Newest)</option>
+        <option value="title_asc">Title (A - Z)</option>
+        <option value="duration_desc">Duration (Longest)</option>
+      </select>
+
+      <button id="reset-filters-btn" class="btn btn-secondary btn-sm">Reset</button>
+    </section>
+
+    <!-- Movie Cards Grid -->
+    <div id="movies-container" class="movie-grid">
+      <!-- Injected by movies.js -->
+    </div>
+
+    <!-- Pagination -->
+    <div id="pagination-controls" class="pagination">
+      <!-- Injected by movies.js -->
+    </div>
+  </main>
+
+  <!-- Showtimes Modal -->
+  <div id="showtimes-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+        <div>
+          <h2 id="modal-movie-title" style="font-size: 1.5rem; margin-bottom: 0.25rem;">Movie Title</h2>
+          <span id="modal-movie-meta" style="color: var(--text-muted); font-size: 0.85rem;">Genre &bull; Duration</span>
+        </div>
+        <button id="close-modal-btn" class="btn btn-secondary btn-sm">&times;</button>
+      </div>
+
+      <div id="modal-showtimes-content" style="display: flex; flex-direction: column; gap: 1.25rem;">
+        <!-- Showtimes grouped by theatre -->
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/movies.js"></script>
+</body>
+</html>
