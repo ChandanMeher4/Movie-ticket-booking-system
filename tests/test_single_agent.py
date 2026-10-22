@@ -123,7 +123,7 @@ def test_confirmation_guardrail_negations_and_affirmations():
         )
     assert "lacked affirmation" in str(exc.value)
 
-    # 4. Explicit affirmative without negation -> APPROVED
+    # 4. Explicit affirmatives without negation -> APPROVED
     check_confirmation_guardrail(
         "confirm_booking",
         summary_history + [{"role": "user", "content": "yes, confirm and pay"}],
@@ -132,8 +132,46 @@ def test_confirmation_guardrail_negations_and_affirmations():
         "confirm_booking",
         summary_history + [{"role": "user", "content": "yes"}],
     )
+    check_confirmation_guardrail(
+        "confirm_booking",
+        summary_history + [{"role": "user", "content": "yes, proceed, no problem"}],
+    )
+    for affirmative in ["ok", "okay", "yep", "yeah", "do it", "sounds good", "please do"]:
+        check_confirmation_guardrail(
+            "confirm_booking",
+            summary_history + [{"role": "user", "content": affirmative}],
+        )
 
-    # 5. Missing assistant summary even with affirmative user message -> REJECTED
+    # 5. Cancellation confirmations -> APPROVED for cancel_booking
+    cancel_summary = [
+        {"role": "assistant", "content": "Your booking #123 has been retrieved. Total refundable amount: ₹450. Please confirm cancellation."},
+    ]
+    check_confirmation_guardrail(
+        "cancel_booking",
+        cancel_summary + [{"role": "user", "content": "yes, cancel my booking"}],
+    )
+    check_confirmation_guardrail(
+        "cancel_booking",
+        cancel_summary + [{"role": "user", "content": "confirm cancel"}],
+    )
+    check_confirmation_guardrail(
+        "cancel_booking",
+        cancel_summary + [{"role": "user", "content": "cancel it, no problem"}],
+    )
+
+    # 6. Cancellation with negation or hesitation -> REJECTED
+    with pytest.raises(ValidationError):
+        check_confirmation_guardrail(
+            "cancel_booking",
+            cancel_summary + [{"role": "user", "content": "wait, don't cancel yet"}],
+        )
+    with pytest.raises(ValidationError):
+        check_confirmation_guardrail(
+            "cancel_booking",
+            cancel_summary + [{"role": "user", "content": "no, don't cancel"}],
+        )
+
+    # 7. Missing assistant summary even with affirmative user message -> REJECTED
     no_summary_history = [
         {"role": "assistant", "content": "Hello, how can I assist you with movies today?"},
         {"role": "user", "content": "yes proceed"},

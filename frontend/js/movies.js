@@ -74,9 +74,7 @@ async function fetchMovies() {
   const language = document.getElementById("language-filter").value;
   const sort = document.getElementById("sort-filter").value;
 
-  const [sortField, sortDir] = sort.split("_");
-
-  let url = `/api/movies?page=${currentPage}&page_size=${pageSize}&sort_by=${sortField}&sort_order=${sortDir}`;
+  let url = `/api/movies?page=${currentPage}&page_size=${pageSize}&sort_by=${encodeURIComponent(sort)}`;
   if (search) url += `&search=${encodeURIComponent(search)}`;
   if (genre) url += `&genre=${encodeURIComponent(genre)}`;
   if (language) url += `&language=${encodeURIComponent(language)}`;
@@ -174,7 +172,7 @@ async function openShowtimesModal(movieId) {
     // Group shows by theatre name
     const grouped = {};
     shows.forEach((s) => {
-      const theatre = s.screen ? `${s.screen.theatre_name || 'Cineverse'} (${s.screen.theatre_city || 'City'})` : "Cineverse Multiplex";
+      const theatre = s.theatre ? `${s.theatre.name} (${s.theatre.city})` : (s.screen && s.screen.theatre_name ? `${s.screen.theatre_name}` : "Cineverse Multiplex");
       if (!grouped[theatre]) grouped[theatre] = [];
       grouped[theatre].push(s);
     });

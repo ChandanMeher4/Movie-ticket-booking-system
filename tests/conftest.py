@@ -43,7 +43,7 @@ else:
     )
     _keepalive_conn = None
 
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, expire_on_commit=False, bind=test_engine)
 
 
 @pytest.fixture(scope="session", autouse=True)

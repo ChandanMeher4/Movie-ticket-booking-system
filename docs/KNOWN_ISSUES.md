@@ -23,6 +23,15 @@ This document maintains an honest, transparent record of deliberate pedagogical 
 - **Production Roadmap**: Run a background periodic task (e.g. Celery beat, APScheduler, or an asynchronous FastAPI lifespan worker) scanning for `expires_at < NOW()` every 30 seconds.
 
 ## 5. LLM Fallback & Rule-Based Planner
-- **Current State**: When `LLM_API_KEY` is not provided, AI features execute against an internal deterministic mock engine reporting `"mock": true`.
-- **Limitation**: The mock planner uses regex and keyword heuristics. Complex, highly ambiguous, or multi-turn conversational edge cases that deviate from standard flows can fall back to default prompt guidance.
-- **Production Roadmap**: Connect to OpenAI `gpt-4o-mini`, Anthropic Claude, or local Ollama instances for full semantic reasoning.
+- **Current State**: When `LLM_API_KEY` is not provided, AI features execute against an internal deterministic mock engine reporting `"mock": true`. In automated test runs (`tests/test_ai_llm_path.py`), interactions are exercised via a simulated fake OpenAI client.
+- **Limitation**: No live third-party LLM provider has been exercised.
+- **Production Roadmap**: Connect to OpenAI `gpt-4o-mini`, Anthropic Claude, or local Ollama instances for full semantic reasoning with an active API key.
+
+## 6. Docker Compose Verification Status
+- **Current State**: `docker compose up --build` was **never run** because the Docker Desktop daemon was not running on the local host (`error during connect: Get "http://%2F%2F.%2Fpipe%2FdockerDesktopLinuxEngine/v1.51/info": open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified`).
+- **Limitation**: `docker-compose.yml` and `Dockerfile` exist and are structured according to specification, but live container startup, healthcheck polling, and port binding have not been verified in a running Docker environment.
+- **Production Roadmap**: Execute `docker compose up --build` on a machine with an active Docker daemon.
+
+## 7. Database Engine Test Scope
+- **Current State**: The automated pytest suite defaults to SQLite in-memory (`sqlite://`) with `QueuePool`. Full execution against MySQL 8 requires a reachable MySQL instance with credentials supplied via `TEST_DATABASE_URL`.
+- **Limitation**: Concurrency guarantees on SQLite rely on serialization and busy timeouts; true MySQL parallel transaction testing requires running against a live MySQL 8 database.

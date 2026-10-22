@@ -223,11 +223,19 @@ def seed_database(db: Session, target_engine=None) -> None:
     db.commit()
 
     # 6. Shows (Schedule 30+ shows over the next 7 days)
-    show_count = db.scalar(select(Show.id).limit(1))
-    if not show_count:
+    existing_shows = db.scalars(select(Show).order_by(Show.id)).all()
+    now = datetime.utcnow().replace(minute=0, second=0, microsecond=0)
+
+    # Check if shows are missing or if all shows have expired into the past
+    max_start_time = max((s.start_time for s in existing_shows), default=None)
+    needs_refresh = (
+        not existing_shows
+        or (max_start_time and max_start_time < now + timedelta(days=2))
+    )
+
+    if not existing_shows:
         movies = db.scalars(select(Movie).order_by(Movie.id)).all()
         screens = db.scalars(select(Screen).order_by(Screen.id)).all()
-        now = datetime.utcnow().replace(minute=0, second=0, microsecond=0)
         shows_to_create = []
 
         # Generate 35 shows across days 1 to 7 (next 7 days)
@@ -260,8 +268,25 @@ def seed_database(db: Session, target_engine=None) -> None:
         db.add_all(shows_to_create)
         db.commit()
         logger.info("Successfully scheduled %d shows across 7 days.", len(shows_to_create))
+    elif needs_refresh:
+        # Re-anchor existing shows forward to the upcoming 7 days starting tomorrow
+        logger.info("Existing shows have expired. Re-anchoring %d shows to the upcoming 7 days.", len(existing_shows))
+        shows_per_day = 5
+        for idx, show in enumerate(existing_shows):
+            day_offset = (idx // shows_per_day) + 1
+            slot_idx = idx % shows_per_day
+            time_slots = [(11, 0), (14, 0), (17, 0), (19, 30), (22, 15)]
+            hour, minute = time_slots[slot_idx]
+            target_date = now + timedelta(days=day_offset)
+            duration = show.movie.duration_min if show.movie else 120
+            new_start = target_date.replace(hour=hour, minute=minute)
+            show.start_time = new_start
+            show.end_time = new_start + timedelta(minutes=duration + 20)
+            show.status = ShowStatus.SCHEDULED
+        db.commit()
+        logger.info("Successfully re-anchored %d shows to future dates.", len(existing_shows))
     else:
-        logger.info("Shows already present in database, skipping show generation.")
+        logger.info("Shows already present and active in database.")
 
     logger.info("Database seeding completed successfully.")
 

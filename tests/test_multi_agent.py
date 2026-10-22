@@ -173,6 +173,28 @@ def test_multi_agent_critic_approves_and_payment_finalizes(client: TestClient):
     assert "NotificationAgent" in agents_involved
 
 
+def test_multi_agent_critic_approves_affirmation_phrases(client: TestClient):
+    """Verify CriticAgent approves 'yes, proceed, no problem', 'ok', and 'sounds good'."""
+    for phrase in ["yes, proceed, no problem", "ok", "sounds good", "do it"]:
+        session_id = f"multi-phrase-{uuid.uuid4().hex[:8]}"
+        # Step 1: Hold seats
+        client.post("/api/ai/multi/chat", json={
+            "session_id": session_id,
+            "user_id": 2,
+            "message": "Hold seats 1 and 2 for show 1",
+        })
+        # Step 2: Confirm with phrase
+        r = client.post("/api/ai/multi/chat", json={
+            "session_id": session_id,
+            "user_id": 2,
+            "message": phrase,
+        })
+        assert r.status_code == 200
+        data = r.json()
+        assert data["state"]["critic_approved"] is True
+        assert data["state"]["booking_confirmed"] is True
+
+
 def test_multi_agent_support_policy_and_bookings(client: TestClient):
     """Verify SupportAgent provides cinema policy information and booking history."""
     session_id = f"multi-support-{uuid.uuid4().hex[:8]}"

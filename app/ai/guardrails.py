@@ -105,8 +105,18 @@ def check_off_topic(user_text: str) -> Optional[str]:
 
 # --- Explicit Confirmation Guardrail ---
 
-AFFIRMATIVE_PATTERN = r"\b(yes|confirm|proceed|approve|authorized|pay now|confirm and pay|book it now|proceed with payment)\b"
-NEGATION_OR_HESITATION_PATTERN = r"\b(don'?t|not yet|wait|no|nope|never|stop|abort|hold on|hang on|thinking|maybe|pause|later|tomorrow|next week|why|how|who|should i|can i)\b|\bbut\b"
+AFFIRMATIVE_PATTERN = (
+    r"\b(yes|yep|yeah|ok|okay|sure|confirm|confirmed|proceed|pay|pay now|approve|approved|"
+    r"authorized|go ahead|do it|sounds good|please do|book it|book it now|proceed with payment)\b"
+)
+CANCEL_AFFIRMATIVE_PATTERN = (
+    r"\b(yes|yep|yeah|ok|okay|sure|confirm|confirmed|cancel|cancel it|cancel booking|"
+    r"cancel my booking|go ahead|do it|sounds good|please do)\b"
+)
+NEGATION_OR_HESITATION_PATTERN = (
+    r"\b(don'?t|do not|not yet|wait|hold on|hang on|but wait|stop|abort|pause|never mind|nevermind)\b"
+    r"|\b(no|nope)\b(?!\s+(problem|worries|issue|issues))"
+)
 
 
 def check_confirmation_guardrail(
@@ -117,7 +127,7 @@ def check_confirmation_guardrail(
     Verifies:
     1. A previous assistant message presented a summary (booking reference, price, or seats).
     2. The user's most recent reply explicitly affirms consent.
-    3. The user reply does NOT contain negations, hesitations, or conditionals ("don't pay", "yes but wait", "not yet").
+    3. The user reply does NOT contain negations, hesitations, or questions ("don't pay yet", "yes but wait", "how do I pay?").
     """
     if tool_name not in ("confirm_booking", "cancel_booking"):
         return
@@ -142,10 +152,14 @@ def check_confirmation_guardrail(
 
     last_user_message = user_messages[-1].get("content", "").lower()
 
-    # Reject if message contains negations, hesitations, questions, or conditionals
+    # Reject if message contains negations, hesitations, questions
     has_negation = bool(re.search(NEGATION_OR_HESITATION_PATTERN, last_user_message))
     is_question = "?" in last_user_message
-    has_affirmation = bool(re.search(AFFIRMATIVE_PATTERN, last_user_message))
+
+    if tool_name == "cancel_booking":
+        has_affirmation = bool(re.search(CANCEL_AFFIRMATIVE_PATTERN, last_user_message))
+    else:
+        has_affirmation = bool(re.search(AFFIRMATIVE_PATTERN, last_user_message))
 
     if has_negation or is_question or not has_affirmation:
         raise ValidationError(

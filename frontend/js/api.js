@@ -64,9 +64,11 @@ function formatDateTime(dtStr) {
  * Unified API Client wrapper with standard error extraction.
  */
 async function apiClient(path, options = {}) {
+  const currentUserId = getCurrentUserId();
   const config = {
     headers: {
       "Content-Type": "application/json",
+      "X-User-Id": currentUserId ? currentUserId.toString() : "2",
       ...(options.headers || {}),
     },
     ...options,

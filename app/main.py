@@ -14,7 +14,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.database import Base, engine, get_db
+from app.database import Base, SessionLocal, engine, get_db
 from app.errors import setup_exception_handlers
 from app.routers import (
     ai_agent,
@@ -36,6 +36,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Startup and shutdown lifecycle events."""
     try:
         Base.metadata.create_all(bind=engine)
+        with SessionLocal() as db:
+            from app.services.seed import seed_database
+            seed_database(db)
     except Exception:
         # Gracefully handle unconfigured MySQL engine during testing or offline runs
         pass

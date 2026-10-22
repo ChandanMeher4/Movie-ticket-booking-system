@@ -38,6 +38,29 @@ REFUND_TIER_FULL_PERCENT = 100
 REFUND_TIER_PARTIAL_PERCENT = 50
 
 
+import logging
+import time
+
+logger = logging.getLogger(__name__)
+
+
+def _is_seat_unique_violation(e: IntegrityError) -> bool:
+    """Check if the IntegrityError is caused by duplicate seat booking on uq_show_seat."""
+    msg = str(e).lower()
+    return "uq_show_seat" in msg or "booking_seats" in msg or "unique constraint" in msg or "duplicate entry" in msg
+
+
+def _is_transient_lock_error(e: OperationalError) -> bool:
+    """Check if the OperationalError is a transient MySQL deadlock (1213) or lock wait timeout (1205), or SQLite lock."""
+    orig = getattr(e, "orig", None)
+    if orig and hasattr(orig, "args") and len(orig.args) > 0:
+        code = orig.args[0]
+        if code in (1205, 1213):  # MySQL ER_LOCK_WAIT_TIMEOUT, ER_LOCK_DEADLOCK
+            return True
+    msg = str(e).lower()
+    return any(term in msg for term in ["deadlock", "lock wait timeout", "database is locked", "database table is locked"])
+
+
 def release_expired_holds(db: Session, show_id: Optional[int] = None) -> int:
     """Find and cancel pending bookings past their 5-minute TTL, releasing seats."""
     try:
@@ -61,9 +84,12 @@ def release_expired_holds(db: Session, show_id: Optional[int] = None) -> int:
             db.commit()
 
         return count
-    except (OperationalError, Exception):
+    except OperationalError as e:
         db.rollback()
-        return 0
+        if _is_transient_lock_error(e):
+            return 0
+        logger.error("OperationalError during release_expired_holds: %s", e, exc_info=True)
+        raise
 
 
 def get_show_seat_map(db: Session, show_id: int) -> List[SeatMapItem]:
@@ -127,95 +153,117 @@ def hold_seats(db: Session, user_id: int, show_id: int, seat_ids: List[int]) -> 
     - All seats belong to the screen
     - Atomic seat locking preventing double booking via UNIQUE(show_id, seat_id)
     """
-    user = db.get(User, user_id)
-    if not user:
-        raise NotFoundError(f"User with ID {user_id} was not found")
-
-    show = db.get(Show, show_id)
-    if not show:
-        raise NotFoundError(f"Show with ID {show_id} was not found")
-
-    if show.status != ShowStatus.SCHEDULED:
-        raise BadRequestError(f"Cannot book tickets: show is {show.status.value}")
-
-    now = datetime.utcnow()
-    if show.start_time <= now:
-        raise BadRequestError("Cannot book tickets for a show that has already started or concluded")
-
     if not seat_ids:
         raise ValidationError("At least 1 seat must be selected")
 
     if len(seat_ids) > MAX_SEATS_PER_BOOKING:
         raise ValidationError(f"Cannot book more than {MAX_SEATS_PER_BOOKING} seats per transaction")
 
-    # Fetch requested seats and verify they belong to this screen
-    seats = db.scalars(select(Seat).where(Seat.id.in_(seat_ids))).all()
-    if len(seats) != len(seat_ids):
-        raise NotFoundError("One or more selected seat IDs do not exist")
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            user = db.get(User, user_id)
+            if not user:
+                raise NotFoundError(f"User with ID {user_id} was not found")
 
-    for s in seats:
-        if s.screen_id != show.screen_id:
-            raise ValidationError(
-                f"Seat {s.row_label}{s.seat_number} does not belong to the screen hosting this show"
+            show = db.get(Show, show_id)
+            if not show:
+                raise NotFoundError(f"Show with ID {show_id} was not found")
+
+            if show.status != ShowStatus.SCHEDULED:
+                raise BadRequestError(f"Cannot book tickets: show is {show.status.value}")
+
+            now = datetime.utcnow()
+            if show.start_time <= now:
+                raise BadRequestError("Cannot book tickets for a show that has already started or concluded")
+
+            # Fetch requested seats and verify they belong to this screen
+            seats = db.scalars(select(Seat).where(Seat.id.in_(seat_ids))).all()
+            if len(seats) != len(seat_ids):
+                raise NotFoundError("One or more selected seat IDs do not exist")
+
+            for s in seats:
+                if s.screen_id != show.screen_id:
+                    raise ValidationError(
+                        f"Seat {s.row_label}{s.seat_number} does not belong to the screen hosting this show"
+                    )
+
+            # Calculate price breakdown
+            totals = calculate_booking_totals(show.base_price, seats, show.start_time)
+
+            # Release expired holds for this show first
+            release_expired_holds(db, show_id)
+            # Check if any of the requested seats are already held or confirmed
+            conflict_seat = db.scalar(
+                select(BookingSeat.seat_id)
+                .join(Booking, Booking.id == BookingSeat.booking_id)
+                .where(
+                    BookingSeat.show_id == show_id,
+                    BookingSeat.seat_id.in_(seat_ids),
+                    Booking.status.in_([BookingStatus.PENDING, BookingStatus.CONFIRMED]),
+                )
+                .limit(1)
             )
+            if conflict_seat:
+                raise ConflictError(
+                    "One or more selected seats have already been booked or held by another customer. Please choose other seats."
+                )
 
-    # Calculate price breakdown
-    totals = calculate_booking_totals(show.base_price, seats, show.start_time)
-
-    try:
-        # Release expired holds for this show first
-        release_expired_holds(db, show_id)
-        # Check if any of the requested seats are already held or confirmed
-        conflict_seat = db.scalar(
-            select(BookingSeat.seat_id)
-            .join(Booking, Booking.id == BookingSeat.booking_id)
-            .where(
-                BookingSeat.show_id == show_id,
-                BookingSeat.seat_id.in_(seat_ids),
-                Booking.status.in_([BookingStatus.PENDING, BookingStatus.CONFIRMED]),
+            # Create pending booking with 5-minute expiration
+            expires_at = now + timedelta(minutes=HOLD_DURATION_MINUTES)
+            booking = Booking(
+                user_id=user_id,
+                show_id=show_id,
+                status=BookingStatus.PENDING,
+                total_amount=totals["total_amount"],
+                created_at=now,
+                expires_at=expires_at,
             )
-            .limit(1)
-        )
-        if conflict_seat:
+            db.add(booking)
+            db.flush()  # obtain booking.id
+
+            # Insert booking seats
+            booking_seats = []
+            for s in seats:
+                booking_seats.append(
+                    BookingSeat(
+                        booking_id=booking.id,
+                        show_id=show_id,
+                        seat_id=s.id,
+                        price=totals["per_seat"][s.id],
+                    )
+                )
+            db.add_all(booking_seats)
+            db.commit()
+            return booking
+
+        except (ConflictError, NotFoundError, BadRequestError, ValidationError):
+            db.rollback()
+            raise
+        except IntegrityError as e:
+            db.rollback()
+            if _is_seat_unique_violation(e):
+                raise ConflictError(
+                    "One or more selected seats have already been booked or held by another customer. Please choose other seats."
+                )
+            logger.error("Database integrity error in hold_seats: %s", e, exc_info=True)
+            raise
+        except FlushError as e:
+            db.rollback()
             raise ConflictError(
                 "One or more selected seats have already been booked or held by another customer. Please choose other seats."
             )
+        except OperationalError as e:
+            db.rollback()
+            if _is_transient_lock_error(e) and attempt < max_retries - 1:
+                time.sleep(0.05 * (2 ** attempt))
+                continue
+            logger.error("Database operational error in hold_seats (attempt %d/%d): %s", attempt + 1, max_retries, e, exc_info=True)
+            raise
 
-        # Create pending booking with 5-minute expiration
-        expires_at = now + timedelta(minutes=HOLD_DURATION_MINUTES)
-        booking = Booking(
-            user_id=user_id,
-            show_id=show_id,
-            status=BookingStatus.PENDING,
-            total_amount=totals["total_amount"],
-            created_at=now,
-            expires_at=expires_at,
-        )
-        db.add(booking)
-        db.flush()  # obtain booking.id
-
-        # Insert booking seats
-        booking_seats = []
-        for s in seats:
-            booking_seats.append(
-                BookingSeat(
-                    booking_id=booking.id,
-                    show_id=show_id,
-                    seat_id=s.id,
-                    price=totals["per_seat"][s.id],
-                )
-            )
-        db.add_all(booking_seats)
-        db.commit()
-    except ConflictError:
-        raise
-    except (IntegrityError, FlushError, OperationalError):
-        db.rollback()
-        raise ConflictError(
-            "One or more selected seats have already been booked or held by another customer. Please choose other seats."
-        )
-
-    return booking
+    raise ConflictError(
+        "One or more selected seats have already been booked or held by another customer. Please choose other seats."
+    )
 
 
 def confirm_booking(

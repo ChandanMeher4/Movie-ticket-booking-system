@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.ai.guardrails import (
     AFFIRMATIVE_PATTERN,
+    CANCEL_AFFIRMATIVE_PATTERN,
     NEGATION_OR_HESITATION_PATTERN,
     check_confirmation_guardrail,
     check_off_topic,
@@ -270,9 +271,7 @@ class CriticAgent:
         if proposed_action == "cancel_booking":
             has_negation = bool(re.search(NEGATION_OR_HESITATION_PATTERN, msg_lower))
             is_question = "?" in msg_lower
-            cancel_affirmative = bool(
-                re.search(r"\b(confirm cancel|yes cancel|proceed with cancel|cancel it|yes, cancel|yes please cancel)\b", msg_lower)
-            )
+            cancel_affirmative = bool(re.search(CANCEL_AFFIRMATIVE_PATTERN, msg_lower))
             if has_negation or is_question or not cancel_affirmative:
                 return False, "CriticAgent verification rejected: Cancellation requires explicit user confirmation without questions or hesitation."
             return True, "CriticAgent approved: Cancellation request validated against cinema cutoff policy."
@@ -584,7 +583,11 @@ class OrchestratorEngine:
     def _classify_intent(cls, msg_lower: str, state: AgentSessionState) -> str:
         """Classify user query into specialist domains."""
         # 1. Affirmation / payment confirmation check
-        if state.held_booking_id and any(kw in msg_lower for kw in ["confirm", "proceed", "pay", "yes", "sure", "approve"]):
+        if state.held_booking_id and (
+            re.search(AFFIRMATIVE_PATTERN, msg_lower)
+            or re.search(NEGATION_OR_HESITATION_PATTERN, msg_lower)
+            or any(kw in msg_lower for kw in ["confirm", "proceed", "pay", "yes", "sure", "approve", "ok", "okay", "yep", "yeah", "do it", "sounds good", "please do"])
+        ):
             return "payment"
         # 2. Support / refund / policy check
         if any(kw in msg_lower for kw in ["cancel", "refund", "policy", "rules", "my bookings", "my tickets"]):

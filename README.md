@@ -200,11 +200,11 @@ erDiagram
 
 ## Setup & Running Locally
 
-### Option 1: Native Python Run
+### Option 1: Native Python Run (Zero-Setup SQLite or MySQL 8)
 
 #### 1. Prerequisites
 - Python 3.11+
-- MySQL 8.0+ running locally (or use SQLite in-memory for testing)
+- (Optional) MySQL 8.0+ running locally (or use the included pre-seeded SQLite database `cineverse_dev.db` for instant zero-configuration execution)
 
 #### 2. Clone and Setup Environment
 ```bash
@@ -228,14 +228,21 @@ Copy `.env.example` to `.env`:
 ```bash
 cp .env.example .env
 ```
-Default `.env` configuration:
+Default `.env` configuration (ready for zero-setup execution out-of-the-box):
 ```env
 APP_ENV=development
-DATABASE_HOST=localhost
-DATABASE_PORT=3306
-DATABASE_NAME=movie_ticket_booking
-DATABASE_USER=root
-DATABASE_PASSWORD=your_mysql_password
+PORT=8000
+SECRET_KEY=cineverse-super-secret-development-key-change-in-prod
+
+# Zero-setup local SQLite database (pre-seeded with 8 movies, 6 screens, 240 seats, 35 upcoming shows):
+DATABASE_URL=sqlite:///./cineverse_dev.db
+
+# Or for local MySQL 8 (uncomment and configure):
+# DB_HOST=localhost
+# DB_PORT=3306
+# DB_NAME=movie_ticket_booking
+# DB_USER=cineverse
+# DB_PASSWORD=cineverse_secret
 
 # Leave empty for deterministic offline mock mode
 LLM_API_KEY=
@@ -243,12 +250,13 @@ LLM_BASE_URL=https://api.openai.com/v1
 LLM_MODEL=gpt-4o-mini
 ```
 
-#### 4. Initialize Database & Seed Sample Data
-Ensure your MySQL database exists (`CREATE DATABASE movie_ticket_booking;`), then run the idempotent seeder:
+#### 4. Initialize Database & Seed Sample Data (Optional)
+If using MySQL, ensure your database exists (`CREATE DATABASE movie_ticket_booking;`), then run the idempotent seeder:
 ```bash
 python -m app.services.seed
 ```
 This seeds 8 movies, 3 theatres, 6 screens, 240 seats, 35 scheduled shows over the next 7 days, and 3 demo users.
+If using SQLite, `cineverse_dev.db` is already pre-seeded and automatically initialized on app startup.
 
 #### 5. Start the Application
 ```bash
@@ -284,6 +292,9 @@ The application is engineered to work 100% offline without requiring external AP
   LLM_MODEL=gpt-4o-mini
   ```
   Responses will now be generated dynamically by the target model with `"mock": false`.
+
+> [!NOTE]
+> **LLM Provider Testing Notice**: The automated test suite (`tests/test_ai_llm_path.py`) exercises the multi-step tool-calling loop, malformed JSON recovery, and iteration limit enforcement using a simulated fake OpenAI client (`MagicMock`). No live third-party LLM provider (e.g. OpenAI, Anthropic) was exercised during automated test runs. Live LLM execution requires providing a real API key.
 
 ---
 
@@ -420,9 +431,14 @@ Below is an authentic trace extracted during multi-agent ticket reservation:
 
 ## Verification & Testing
 
-Run the full automated test suite (57 tests covering CRUD, concurrency, hold TTL, pricing, GenAI, Single-Agent, Multi-Agent, and Frontend):
+Run the full automated test suite (74 tests covering CRUD, concurrency, hold TTL, pricing, GenAI, Single-Agent, Multi-Agent, Schema Parity, API Contracts, and Frontend):
 ```bash
 pytest -v
 ```
 
-All 57 tests pass with zero warnings, zero dead code, and full offline reproducibility.
+All 74 tests pass with zero warnings, zero dead code, and full offline reproducibility.
+
+> **Note on LLM Provider Testing**: Automated test cases in `tests/test_ai_llm_path.py` (such as `test_fake_client_tool_calling_loop_execution`) simulate OpenAI responses using an in-memory fake client (`MagicMock`). No live third-party LLM provider (OpenAI, Anthropic, or Ollama) was exercised during automated test runs. When a real `LLM_API_KEY` is provided in `.env`, the system connects directly to the live provider using the OpenAI SDK.
+>
+> **Note on Database Engines**: The test suite defaults to SQLite in-memory with `QueuePool` for rapid zero-dependency CI runs. To verify against live MySQL 8, configure `$env:TEST_DATABASE_URL="mysql+pymysql://cineverse:cineverse_secret@localhost:3306/movie_ticket_booking_test"` and run `pytest -v`.
+

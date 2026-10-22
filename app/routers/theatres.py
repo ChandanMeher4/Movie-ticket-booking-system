@@ -13,7 +13,7 @@ from app.schemas import PaginatedResponse, TheatreCreate, TheatreDetailOut, Thea
 router = APIRouter(prefix="/api/theatres", tags=["theatres"])
 
 
-@router.get("", response_model=PaginatedResponse[TheatreOut])
+@router.get("", response_model=PaginatedResponse[TheatreDetailOut])
 def list_theatres(
     city: Optional[str] = None,
     page: int = Query(1, ge=1),

@@ -31,7 +31,8 @@ async function loadDashboardData() {
 
     // 2. Load Theatres and Screens
     cachedTheatres = await apiClient("/api/theatres");
-    populateScreensDropdown(cachedTheatres);
+    const theatresList = cachedTheatres.items || (Array.isArray(cachedTheatres) ? cachedTheatres : []);
+    populateScreensDropdown(theatresList);
 
     // 3. Load Bookings stats across demo users to compute total revenue
     let totalRevenue = 0;
@@ -100,9 +101,11 @@ function populateMovieDropdown(movies) {
 
 function populateScreensDropdown(theatres) {
   const select = document.getElementById("s-screen-select");
+  if (!select) return;
   select.innerHTML = '<option value="">-- Select Auditorium Screen --</option>';
 
-  theatres.forEach((t) => {
+  const list = Array.isArray(theatres) ? theatres : (theatres && theatres.items ? theatres.items : []);
+  list.forEach((t) => {
     if (t.screens) {
       t.screens.forEach((s) => {
         const opt = document.createElement("option");

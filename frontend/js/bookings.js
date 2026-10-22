@@ -43,8 +43,8 @@ async function loadCheckout(bookingId) {
 
     document.getElementById("checkout-section").style.display = "block";
     document.getElementById("chk-ref").textContent = `#${booking.id}`;
-    document.getElementById("chk-movie").textContent = booking.show && booking.show.movie ? booking.show.movie.title : "Cineverse Screening";
-    document.getElementById("chk-theatre").textContent = booking.show && booking.show.screen ? `${booking.show.screen.theatre_name || 'Cineverse'} (${booking.show.screen.name})` : "Auditorium";
+    const chkTheatreName = (booking.show && booking.show.theatre) ? `${booking.show.theatre.name} (${booking.show.screen ? booking.show.screen.name : ''})` : (booking.show && booking.show.screen ? `${booking.show.screen.theatre_name || 'Cineverse'} (${booking.show.screen.name})` : "Auditorium");
+    document.getElementById("chk-theatre").textContent = chkTheatreName;
     
     const showDt = booking.show ? new Date(booking.show.start_time) : new Date();
     document.getElementById("chk-time").textContent = showDt.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
@@ -128,8 +128,7 @@ async function loadUserBookings() {
     tbody.innerHTML = bookings.map((b) => {
       const movieTitle = b.show && b.show.movie ? b.show.movie.title : `Show #${b.show_id}`;
       const showDt = b.show ? new Date(b.show.start_time) : null;
-      const showStr = showDt ? showDt.toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" }) : "N/A";
-      const theatreStr = b.show && b.show.screen ? `${b.show.screen.theatre_name || 'Cineverse'} (${b.show.screen.name})` : "Screen";
+      const theatreStr = (b.show && b.show.theatre) ? `${b.show.theatre.name} (${b.show.screen ? b.show.screen.name : ''})` : (b.show && b.show.screen ? `${b.show.screen.theatre_name || 'Cineverse'} (${b.show.screen.name})` : "Screen");
       const seatsStr = b.booking_seats ? b.booking_seats.map(bs => `${bs.seat.row_label}${bs.seat.seat_number}`).join(", ") : "N/A";
       
       const now = new Date();

@@ -47,8 +47,8 @@ class FakeChatCompletionResponse:
         self.choices = [FakeChoice(message)]
 
 
-def test_live_llm_tool_calling_loop_execution(db_session: Session):
-    """Verify the multi-step tool-calling loop executes tool, appends context, and yields final synthesis."""
+def test_fake_client_tool_calling_loop_execution(db_session: Session):
+    """Verify with fake OpenAI client that the multi-step tool-calling loop executes tool, appends context, and yields final synthesis."""
     session_id = f"llm-test-{uuid.uuid4().hex[:8]}"
 
     # Mock OpenAI client that:
@@ -87,8 +87,8 @@ def test_live_llm_tool_calling_loop_execution(db_session: Session):
         assert response.tool_calls_made[0]["result"]["count"] >= 1
 
 
-def test_live_llm_invalid_json_arguments_handled_gracefully(db_session: Session):
-    """Verify tool call with malformed/invalid JSON arguments does not crash and recovers."""
+def test_fake_client_invalid_json_arguments_handled_gracefully(db_session: Session):
+    """Verify with fake OpenAI client that tool call with malformed/invalid JSON arguments does not crash and recovers."""
     session_id = f"llm-bad-json-{uuid.uuid4().hex[:8]}"
 
     # Return invalid JSON in tool arguments
@@ -124,8 +124,8 @@ def test_live_llm_invalid_json_arguments_handled_gracefully(db_session: Session)
         assert "catalog" in response.reply.lower() or "movies" in response.reply.lower()
 
 
-def test_live_llm_iteration_limit_enforced(db_session: Session):
-    """Verify agent loop terminates cleanly at MAX_ITERATIONS when model continually returns tool calls."""
+def test_fake_client_iteration_limit_enforced(db_session: Session):
+    """Verify with fake OpenAI client that agent loop terminates cleanly at MAX_ITERATIONS when model continually returns tool calls."""
     session_id = f"llm-infinite-{uuid.uuid4().hex[:8]}"
 
     # Client continually returns tool calls without producing final text
@@ -153,8 +153,8 @@ def test_live_llm_iteration_limit_enforced(db_session: Session):
         assert "reasoning" in response.reply.lower() or "limit" in response.reply.lower() or "steps" in response.reply.lower()
 
 
-def test_structured_json_retry_mechanism(db_session: Session):
-    """Verify structured output generator retries when model first returns non-JSON text."""
+def test_fake_client_structured_json_retry_mechanism(db_session: Session):
+    """Verify with fake OpenAI client that structured output generator retries when model first returns non-JSON text."""
     invalid_json_text = "Here is my movie recommendation: Inception is great!"
     valid_json_text = json.dumps({
         "recommendations": [

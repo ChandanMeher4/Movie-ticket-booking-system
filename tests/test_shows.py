@@ -91,3 +91,29 @@ def test_create_show_invalid_times(client: TestClient):
     assert res.status_code == 422
     err = res.json()
     assert err["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_theatres_include_screens(client: TestClient):
+    """Verify that listing theatres returns detailed screen arrays for each theatre."""
+    res = client.get("/api/theatres")
+    assert res.status_code == 200
+    data = res.json()
+    assert len(data["items"]) >= 1
+    first_theatre = data["items"][0]
+    assert "screens" in first_theatre
+    assert isinstance(first_theatre["screens"], list)
+    assert len(first_theatre["screens"]) >= 1
+    screen = first_theatre["screens"][0]
+    assert "name" in screen
+    assert "total_rows" in screen
+    assert "seats_per_row" in screen
+
+
+def test_system_health_endpoint(client: TestClient):
+    """Verify the /health check endpoint returns healthy status and DB connected."""
+    res = client.get("/health")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "healthy"
+    assert data["database"] == "connected"
+

@@ -46,11 +46,13 @@ All error responses strictly follow the standardized envelope:
 ## 5. Bookings & Payments
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/api/bookings` | Hold seats (max 6, 5-minute TTL) |
-| `GET` | `/api/bookings/{id}` | Get booking details |
-| `POST` | `/api/payments` | Confirm payment and finalize booking |
-| `POST` | `/api/bookings/{id}/cancel` | Cancel booking and calculate refund |
-| `GET` | `/api/users/{id}/bookings` | Get user booking history |
+| `POST` | `/api/bookings` | Hold seats (max 6, 5-minute TTL). Body: `{"user_id": 2, "show_id": 1, "seat_ids": [1, 2]}` |
+| `GET` | `/api/bookings/{id}` | Get booking details (requires ownership or admin) |
+| `POST` | `/api/payments` | Confirm payment and finalize booking. Body: `{"booking_id": 1, "method": "card"}` (accepts `payment_method` as alias) |
+| `POST` | `/api/bookings/{id}/cancel` | Cancel booking and calculate refund (requires ownership or admin) |
+| `GET` | `/api/users/{id}/bookings` | Get user booking history (requires ownership or admin) |
+
+> **Authentication & Authorization Note**: For pedagogical simplicity, user identity is passed via `X-User-Id` header or `user_id` query/body param. Endpoints enforcing admin privileges check `User.role == 'admin'` (User #1). Endpoints accessing private booking data strictly verify that the caller owns the target booking.
 
 ## 6. Generative AI (Direct LLM Calls)
 | Method | Path | Request Body | Description |

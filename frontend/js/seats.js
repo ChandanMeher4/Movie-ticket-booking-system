@@ -56,7 +56,7 @@ function renderShowHeader(show) {
   const dt = new Date(show.start_time);
   const timeStr = dt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
   const dateStr = dt.toLocaleDateString("en-IN", { weekday: "short", month: "short", day: "numeric" });
-  const theatreName = show.screen ? `${show.screen.theatre_name || 'Cineverse'} (${show.screen.name})` : "Main Screen";
+  const theatreName = show.theatre ? `${show.theatre.name} (${show.screen ? show.screen.name : ''})` : (show.screen ? `${show.screen.theatre_name || 'Cineverse'} (${show.screen.name})` : "Main Screen");
 
   subEl.textContent = `${dateStr} at ${timeStr} • ${theatreName} • Base Price: ₹${parseFloat(show.base_price).toFixed(2)}`;
 }
